@@ -1,0 +1,169 @@
+service:
+  name: aac-2fauth
+  friendly_name: 2FAuth Authenticator
+  image_repo: 2fauth/2fauth
+  image_tag: 9.0.0
+  description: Zwei Faktor Authentifizierungsapp
+  icon: https://docs.2fauth.app/static/2fauth_light.png
+  category: Sicherheit
+  stage: prod
+  hostname: 2fauth
+ports:
+- name: web
+  port: 8000
+  external_port: 8001
+  protocol: TCP
+config:
+  domain_name: example.com
+  generate_hostname: false
+  integrations:
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+      create_wildcard: true
+  schema_version: 2
+stage_overrides:
+  prod:
+    service:
+      hostname: 2fauth
+    config:
+      generate_hostname: false
+secrets:
+  APP_NAME: Familie 2FA
+  MIX_ENV: local
+  APP_ENV: local
+  APP_DEBUG: 'false'
+  SITE_OWNER: CHANGE_ME
+  APP_KEY: CHANGE_ME
+  APP_URL: CHANGE_ME
+  IS_DEMO_APP: 'false'
+  LOG_CHANNEL: daily
+  LOG_LEVEL: notice
+  CACHE_DRIVER: file
+  SESSION_DRIVER: file
+  MAIL_DRIVER: log
+  MAIL_HOST: CHANGE_ME
+  MAIL_PORT: '465'
+  MAIL_USERNAME: CHANGE_ME
+  MAIL_PASSWORD: CHANGE_ME
+  MAIL_ENCRYPTION: TLS
+  MAIL_FROM_NAME: Backend 2FA
+  MAIL_FROM_ADDRESS: CHANGE_ME
+  MAIL_VERIFY_SSL_PEER: 'true'
+  THROTTLE_API: '60'
+  LOGIN_THROTTLE: '5'
+  AUTHENTICATION_GUARD: CHANGE_ME
+  WEBAUTHN_NAME: CHANGE_ME
+  WEBAUTHN_ID: CHANGE_ME
+  WEBAUTHN_ICON: CHANGE_ME
+  WEBAUTHN_USER_VERIFICATION: CHANGE_ME
+  OPENID_AUTHORIZE_URL: CHANGE_ME
+  OPENID_TOKEN_URL: CHANGE_ME
+  OPENID_USERINFO_URL: CHANGE_ME
+  OPENID_CLIENT_ID: CHANGE_ME
+  OPENID_CLIENT_SECRET: CHANGE_ME
+  TRUSTED_PROXIES: '*'
+  PROXY_FOR_OUTGOING_REQUESTS: 'null'
+  BROADCAST_DRIVER: log
+  QUEUE_DRIVER: sync
+  SESSION_LIFETIME: '120'
+  REDIS_HOST: CHANGE_ME
+  REDIS_PORT: '6379'
+volumes:
+  config:
+    description: 2FAuth configuration and data
+  redis-data:
+    description: Redis data
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    restart_policy: always
+    host_base_path: /export/docker
+    volumes:
+    - config:/2fauth
+    - redis-data:/data
+    environment:
+      PUID: '{{ vars.PUID }}'
+      TZ: '{{ vars.TZ }}'
+      PGID: '{{ vars.PGID }}'
+      APP_NAME: '{{ secrets.APP_NAME }}'
+      MIX_ENV: '{{ secrets.MIX_ENV }}'
+      APP_ENV: '{{ secrets.APP_ENV }}'
+      APP_DEBUG: '{{ secrets.APP_DEBUG }}'
+      SITE_OWNER: '{{ secrets.SITE_OWNER }}'
+      APP_KEY: '{{ secrets.APP_KEY }}'
+      APP_URL: '{{ secrets.APP_URL }}'
+      IS_DEMO_APP: '{{ secrets.IS_DEMO_APP }}'
+      LOG_CHANNEL: '{{ secrets.LOG_CHANNEL }}'
+      LOG_LEVEL: '{{ secrets.LOG_LEVEL }}'
+      CACHE_DRIVER: '{{ secrets.CACHE_DRIVER }}'
+      SESSION_DRIVER: '{{ secrets.SESSION_DRIVER }}'
+      MAIL_DRIVER: '{{ secrets.MAIL_DRIVER }}'
+      MAIL_HOST: '{{ secrets.MAIL_HOST }}'
+      MAIL_PORT: '{{ secrets.MAIL_PORT }}'
+      MAIL_USERNAME: '{{ secrets.MAIL_USERNAME }}'
+      MAIL_PASSWORD: '{{ secrets.MAIL_PASSWORD }}'
+      MAIL_ENCRYPTION: '{{ secrets.MAIL_ENCRYPTION }}'
+      MAIL_FROM_NAME: '{{ secrets.MAIL_FROM_NAME }}'
+      MAIL_FROM_ADDRESS: '{{ secrets.MAIL_FROM_ADDRESS }}'
+      MAIL_VERIFY_SSL_PEER: '{{ secrets.MAIL_VERIFY_SSL_PEER }}'
+      THROTTLE_API: '{{ secrets.THROTTLE_API }}'
+      LOGIN_THROTTLE: '{{ secrets.LOGIN_THROTTLE }}'
+      AUTHENTICATION_GUARD: '{{ secrets.AUTHENTICATION_GUARD }}'
+      WEBAUTHN_NAME: '{{ secrets.WEBAUTHN_NAME }}'
+      WEBAUTHN_ID: '{{ secrets.WEBAUTHN_ID }}'
+      WEBAUTHN_ICON: '{{ secrets.WEBAUTHN_ICON }}'
+      WEBAUTHN_USER_VERIFICATION: '{{ secrets.WEBAUTHN_USER_VERIFICATION }}'
+      OPENID_AUTHORIZE_URL: '{{ secrets.OPENID_AUTHORIZE_URL }}'
+      OPENID_TOKEN_URL: '{{ secrets.OPENID_TOKEN_URL }}'
+      OPENID_USERINFO_URL: '{{ secrets.OPENID_USERINFO_URL }}'
+      OPENID_CLIENT_ID: '{{ secrets.OPENID_CLIENT_ID }}'
+      OPENID_CLIENT_SECRET: '{{ secrets.OPENID_CLIENT_SECRET }}'
+      TRUSTED_PROXIES: '{{ secrets.TRUSTED_PROXIES }}'
+      PROXY_FOR_OUTGOING_REQUESTS: '{{ secrets.PROXY_FOR_OUTGOING_REQUESTS }}'
+      BROADCAST_DRIVER: '{{ secrets.BROADCAST_DRIVER }}'
+      QUEUE_DRIVER: '{{ secrets.QUEUE_DRIVER }}'
+      SESSION_LIFETIME: '{{ secrets.SESSION_LIFETIME }}'
+      REDIS_HOST: '{{ secrets.REDIS_HOST }}'
+      REDIS_PORT: '{{ secrets.REDIS_PORT }}'
+dependencies:
+  redis:
+    import: catalog/redis.yml
+    overrides:
+      name: '{{ service.name }}-redis'
+      image_tag: 8.6.1
+      volumes:
+        redis-data:
+          target: /data
+          description: Persistent storage for redis-data
+      environment:
+        PUID: '{{ vars.PUID }}'
+        TZ: '{{ vars.TZ }}'
+        PGID: '{{ vars.PGID }}'
+vars:
+  PUID: '1000'
+  TZ: Europe/Berlin
+  PGID: '1000'

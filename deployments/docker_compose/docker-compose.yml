@@ -1,0 +1,136 @@
+services:
+  # --- Main Application Service ---
+  aac-2fauth:
+    image: "2fauth/2fauth:9.0.0"
+    container_name: "aac-2fauth"
+    hostname: "2fauth"
+    restart: "always"
+
+
+    environment:
+      PUID: "1000"
+      TZ: "Europe/Berlin"
+      PGID: "1000"
+      APP_NAME: "Familie 2FA"
+      MIX_ENV: "local"
+      APP_ENV: "local"
+      APP_DEBUG: "false"
+      SITE_OWNER: "${SITE_OWNER:?set SITE_OWNER in .env (see .env.example)}"
+      APP_KEY: "${APP_KEY:?set APP_KEY in .env (see .env.example)}"
+      APP_URL: "${APP_URL:?set APP_URL in .env (see .env.example)}"
+      IS_DEMO_APP: "false"
+      LOG_CHANNEL: "daily"
+      LOG_LEVEL: "notice"
+      CACHE_DRIVER: "file"
+      SESSION_DRIVER: "file"
+      MAIL_DRIVER: "log"
+      MAIL_HOST: "${MAIL_HOST:?set MAIL_HOST in .env (see .env.example)}"
+      MAIL_PORT: "465"
+      MAIL_USERNAME: "${MAIL_USERNAME:?set MAIL_USERNAME in .env (see .env.example)}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?set MAIL_PASSWORD in .env (see .env.example)}"
+      MAIL_ENCRYPTION: "TLS"
+      MAIL_FROM_NAME: "Backend 2FA"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:?set MAIL_FROM_ADDRESS in .env (see .env.example)}"
+      MAIL_VERIFY_SSL_PEER: "true"
+      THROTTLE_API: "60"
+      LOGIN_THROTTLE: "5"
+      AUTHENTICATION_GUARD: "${AUTHENTICATION_GUARD:?set AUTHENTICATION_GUARD in .env (see .env.example)}"
+      WEBAUTHN_NAME: "${WEBAUTHN_NAME:?set WEBAUTHN_NAME in .env (see .env.example)}"
+      WEBAUTHN_ID: "${WEBAUTHN_ID:?set WEBAUTHN_ID in .env (see .env.example)}"
+      WEBAUTHN_ICON: "${WEBAUTHN_ICON:?set WEBAUTHN_ICON in .env (see .env.example)}"
+      WEBAUTHN_USER_VERIFICATION: "${WEBAUTHN_USER_VERIFICATION:?set WEBAUTHN_USER_VERIFICATION in .env (see .env.example)}"
+      OPENID_AUTHORIZE_URL: "${OPENID_AUTHORIZE_URL:?set OPENID_AUTHORIZE_URL in .env (see .env.example)}"
+      OPENID_TOKEN_URL: "${OPENID_TOKEN_URL:?set OPENID_TOKEN_URL in .env (see .env.example)}"
+      OPENID_USERINFO_URL: "${OPENID_USERINFO_URL:?set OPENID_USERINFO_URL in .env (see .env.example)}"
+      OPENID_CLIENT_ID: "${OPENID_CLIENT_ID:?set OPENID_CLIENT_ID in .env (see .env.example)}"
+      OPENID_CLIENT_SECRET: "${OPENID_CLIENT_SECRET:?set OPENID_CLIENT_SECRET in .env (see .env.example)}"
+      TRUSTED_PROXIES: "*"
+      PROXY_FOR_OUTGOING_REQUESTS: "null"
+      BROADCAST_DRIVER: "log"
+      QUEUE_DRIVER: "sync"
+      SESSION_LIFETIME: "120"
+      REDIS_HOST: "${REDIS_HOST:?set REDIS_HOST in .env (see .env.example)}"
+      REDIS_PORT: "6379"
+
+    ports:
+      - "8001:8000/tcp"
+
+    volumes:
+      - "/export/docker/aac-2fauth/config:/2fauth"
+      - "/export/docker/aac-2fauth/redis-data:/data"
+
+    networks:
+      - exposed
+      - interconnect
+      - secured
+      - stack_internal
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.aac-2fauth.rule: "Host(`2fauth.example.com`)"
+      traefik.http.routers.aac-2fauth.entrypoints: "websecure"
+      traefik.http.routers.aac-2fauth.tls: "true"
+      traefik.http.routers.aac-2fauth.tls.certresolver: "ionos"
+      traefik.docker.network: "services-secured"
+      traefik.http.services.aac-2fauth.loadbalancer.server.port: "8000"
+      traefik.http.services.aac-2fauth.loadbalancer.server.scheme: "http"
+      auto-dns.createWildcard.aac-2fauth: "true"
+      auto-dns.customDNS.aac-2fauth: "true"
+      auto-dns.customDOMAIN.aac-2fauth: "example.com"
+      auto-dns.customHost.aac-2fauth: "2fauth"
+      homepage.group: "Sicherheit"
+      homepage.name: "2FAuth Authenticator"
+      homepage.href: "https://2fauth.example.com"
+      homepage.icon: "https://docs.2fauth.app/static/2fauth_light.png"
+      homepage.description: "Zwei Faktor Authentifizierungsapp"
+
+
+    depends_on:
+      aac-2fauth-redis:
+        condition: service_healthy
+
+
+  # --- Service Dependencies (Sidecars) ---
+  aac-2fauth-redis:
+    image: "redis:8.6.1"
+    container_name: "aac-2fauth-redis"
+    restart: "always"
+    
+
+    env_file:
+      - .env
+    environment:
+      PUID: "1000"
+      TZ: "Europe/Berlin"
+      PGID: "1000"
+
+
+    volumes:
+      - "/export/docker/aac-2fauth/redis-data:/data"
+
+    networks:
+      - stack_internal
+
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+
+
+networks:
+  secured:
+    name: "services-secured"
+    external: true
+  exposed:
+    name: "services-exposed"
+    external: true
+  interconnect:
+    name: "docker-default"
+    external: true
+  stack_internal:
+    name: "aac-2fauth_stack_internal"
+    driver: "bridge"
+
